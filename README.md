@@ -1,1 +1,3 @@
-# angular-versions-comparison
+# Angular versions comparison
+
+by Aleksandra Malinowska
