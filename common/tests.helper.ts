@@ -20,7 +20,7 @@ export class TestsHelper {
   static downloadResultsCSV(name = "results") {
     const results: ((string | number)[])[] = JSON.parse(localStorage.getItem("results") || "{}");
 
-    const tests: string[] = results.reduce(
+    const tests: string[] = results.reduce<string[]>(
       (acc: string[], result: (string | number)[]) => acc.concat(result.join(';')),
       []
     );
