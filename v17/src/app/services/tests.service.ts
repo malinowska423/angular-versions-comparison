@@ -36,11 +36,12 @@ export class TestsService {
   }
 
   constructor() {
+    const records: number = TestsHelper.RECORDS;
     fetch('http://localhost:3000')
       .then(response => response.json())
       .then((data: User[]) => this._data = {
-        front: data.slice(0, 10000),
-        back: data.slice(10000, 20000)
+        front: data.slice(0, records),
+        back: data.slice(records, records * 2)
       })
       .then(() => this.dataReady.set(true));
   }

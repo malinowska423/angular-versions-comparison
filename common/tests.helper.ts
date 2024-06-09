@@ -1,4 +1,5 @@
 export class TestsHelper {
+  static readonly RECORDS = 5000;
   private static readonly REPEATS = 25;
 
   static runTest(
