@@ -7,6 +7,8 @@ import {TestsService} from "./services/tests.service";
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [TestsService],
   template: `
+    <h1>Angular v17 Performance Tests</h1>
+    <h3>Data ready: {{testsService.dataReady()}}</h3>
     <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px">
       @for (simulation of testsService.simulations(); track simulation.name) {
         <button (click)="simulation.fn()">Run {{ simulation.name }} Simulation</button>

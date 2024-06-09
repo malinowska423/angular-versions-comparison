@@ -1,12 +1,12 @@
 import {Injectable, signal, WritableSignal} from "@angular/core";
 import {TestsHelper} from "../../../../common/tests.helper";
 import {User} from "../../../../common/user.model";
-import usersData from "../../../../common/users.json";
 
 type DataPart = { front: User[], back: User[] };
 
 @Injectable()
 export class TestsService {
+  readonly version: string = 'v17';
   // private readonly _data$: BehaviorSubject<User[]> = new BehaviorSubject<User[]>([]);
   // readonly data$: Observable<User[]> = this._data$.asObservable();
   private readonly _simulations: { name: string, fn: () => void }[] = [
@@ -20,11 +20,12 @@ export class TestsService {
     {name: 'Sort change', fn: () => this._runSortChangeSimulation()},
     {name: 'Filter change', fn: () => this._runFilterChangeSimulation()},
   ];
+
   readonly simulations = signal(this._simulations);
 
+  readonly dataReady = signal<boolean>(false);
   readonly users: WritableSignal<User[]> = signal<User[]>([]);
-  private readonly _dataKey: string = 'v17';
-  private readonly _data: DataPart;
+  private _data: DataPart = {front: [], back: []};
 
   private set data(value: User[]) {
     this.users.set([...value]);
@@ -35,12 +36,17 @@ export class TestsService {
   }
 
   constructor() {
-    const data: User[] = usersData as User[];
-    this._data = {front: data.slice(0, 10000), back: data.slice(10000, 20000)}
+    fetch('http://localhost:3000')
+      .then(response => response.json())
+      .then((data: User[]) => this._data = {
+        front: data.slice(0, 10000),
+        back: data.slice(10000, 20000)
+      })
+      .then(() => this.dataReady.set(true));
   }
 
   downloadResultsCSV(): void {
-    TestsHelper.downloadResultsCSV(this._dataKey);
+    TestsHelper.downloadResultsCSV(this.version);
   }
 
   clearResults(): void {
@@ -52,7 +58,7 @@ export class TestsService {
     initFn: () => void,
     testFn: () => void,
   ): void {
-    TestsHelper.runTest(`${this._dataKey}-${name}`, initFn, testFn);
+    TestsHelper.runTest(`${this.version}-${name}`, initFn, testFn);
   }
 
   private _runLoadDataSimulation(): void {
