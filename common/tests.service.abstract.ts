@@ -1,15 +1,11 @@
-import {Injectable, signal, WritableSignal} from "@angular/core";
-import {TestsHelper} from "../../../../common/tests.helper";
-import {User} from "../../../../common/user.model";
+import {User} from "./user.model";
+import {TestsHelper} from "./tests.helper";
 
 type DataPart = { front: User[], back: User[] };
 
-@Injectable()
-export class TestsService {
-  readonly version: string = 'v17';
-  // private readonly _data$: BehaviorSubject<User[]> = new BehaviorSubject<User[]>([]);
-  // readonly data$: Observable<User[]> = this._data$.asObservable();
-  private readonly _simulations: { name: string, fn: () => void }[] = [
+export abstract class AbstractTestsService {
+  abstract readonly version: string;
+  protected readonly _simulations: { name: string, fn: () => void }[] = [
     {name: 'Load data', fn: () => this._runLoadDataSimulation()},
     {name: 'Load next page', fn: () => this._runLoadNextPageSimulation()},
     {name: 'Load previous page', fn: () => this._runLoadPreviousPageSimulation()},
@@ -21,19 +17,10 @@ export class TestsService {
     {name: 'Filter change', fn: () => this._runFilterChangeSimulation()},
   ];
 
-  readonly simulations = signal(this._simulations);
+  protected _data: DataPart = {front: [], back: []};
 
-  readonly dataReady = signal<boolean>(false);
-  readonly users: WritableSignal<User[]> = signal<User[]>([]);
-  private _data: DataPart = {front: [], back: []};
-
-  private set data(value: User[]) {
-    this.users.set([...value]);
-  }
-
-  private get data(): User[] {
-    return this.users();
-  }
+  protected abstract set data(value: User[]);
+  protected abstract get data(): User[];
 
   constructor() {
     const records: number = TestsHelper.RECORDS;
@@ -42,8 +29,7 @@ export class TestsService {
       .then((data: User[]) => this._data = {
         front: data.slice(0, records),
         back: data.slice(records, records * 2)
-      })
-      .then(() => this.dataReady.set(true));
+      });
   }
 
   downloadResultsCSV(): void {
@@ -54,7 +40,7 @@ export class TestsService {
     TestsHelper.clearResults();
   }
 
-  private _runTest(
+  protected _runTest(
     name: string,
     initFn: () => void,
     testFn: () => void,
@@ -62,15 +48,15 @@ export class TestsService {
     TestsHelper.runTest(`${this.version}-${name}`, initFn, testFn);
   }
 
-  private _runLoadDataSimulation(): void {
+  protected _runLoadDataSimulation(): void {
     this._runTest('loadData', () => this.data = [], () => this.data = this._data.front);
   }
 
-  private _runLoadNextPageSimulation(): void {
+  protected _runLoadNextPageSimulation(): void {
     this._runTest('loadNextPage', () => this.data = this._data.front, () => this.data = this.data.concat(this._data.back));
   }
 
-  private _runLoadPreviousPageSimulation(): void {
+  protected _runLoadPreviousPageSimulation(): void {
     this._runTest('loadPreviousPage', () => this.data = this._data.back, () => {
       const data = [...this.data];
       data.splice(0, 0, ...this._data.front);
@@ -79,7 +65,7 @@ export class TestsService {
   }
 
 
-  private _runExpandAllSimulation(): void {
+  protected _runExpandAllSimulation(): void {
     this._runTest(
       'expandAll',
       () => this.data = this._data.front,
@@ -87,11 +73,11 @@ export class TestsService {
     );
   }
 
-  private _runCollapseAllSimulation(): void {
+  protected _runCollapseAllSimulation(): void {
     this._runTest('collapseAll', () => this.data = this._data.front.concat(this._data.back), () => this.data = this.data.filter((_, index: number) => index % 2 === 0));
   }
 
-  private _runSinglePropertyUpdateSimulation(): void {
+  protected _runSinglePropertyUpdateSimulation(): void {
     this._runTest(
       'singlePropertyUpdate',
       () => this.data = this._data.front,
@@ -99,7 +85,7 @@ export class TestsService {
     );
   }
 
-  private _runObjectUpdateSimulation(): void {
+  protected _runObjectUpdateSimulation(): void {
     this._runTest(
       'objectUpdate',
       () => this.data = this._data.front,
@@ -107,7 +93,7 @@ export class TestsService {
     );
   }
 
-  private _runSortChangeSimulation(): void {
+  protected _runSortChangeSimulation(): void {
     this._runTest(
       'sortChange',
       () => this.data = this._data.front,
@@ -118,7 +104,7 @@ export class TestsService {
     );
   }
 
-  private _runFilterChangeSimulation(): void {
+  protected _runFilterChangeSimulation(): void {
     this._runTest(
       'filterChange',
       () => this.data = this._data.front,
