@@ -13,11 +13,7 @@ export class TestsService extends AbstractTestsService {
 
   readonly simulations$ = of(this._simulations);
 
-  protected set data(value: User[]) {
+  setData(value: User[]): void {
     this._users$.next([...value]);
-  }
-
-  protected get data(): User[] {
-    return this._users$.value;
   }
 }

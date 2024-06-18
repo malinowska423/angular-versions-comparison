@@ -8,11 +8,7 @@ export class TestsService extends AbstractTestsService {
   readonly simulations = signal(this._simulations);
   readonly users: WritableSignal<User[]> = signal<User[]>([]);
 
-  protected override set data(value: User[]) {
+  setData(value: User[]): void {
     this.users.set([...value]);
-  }
-
-  protected override get data(): User[] {
-    return this.users();
   }
 }

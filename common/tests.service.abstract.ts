@@ -11,25 +11,22 @@ export abstract class AbstractTestsService {
     {name: 'Load previous page', fn: () => this._runLoadPreviousPageSimulation()},
     {name: 'Expand all', fn: () => this._runExpandAllSimulation()},
     {name: 'Collapse all', fn: () => this._runCollapseAllSimulation()},
-    {name: 'Single property update', fn: () => this._runSinglePropertyUpdateSimulation()},
+    {name: 'Single property update', fn: () => this._runPropertyUpdateSimulation()},
     {name: 'Object update', fn: () => this._runObjectUpdateSimulation()},
     {name: 'Sort change', fn: () => this._runSortChangeSimulation()},
     {name: 'Filter change', fn: () => this._runFilterChangeSimulation()},
   ];
 
-  protected _data: DataPart = {front: [], back: []};
+  protected _data: User[] = [];
+  protected readonly _RECORDS = 10000;
 
-  protected abstract set data(value: User[]);
-  protected abstract get data(): User[];
+  abstract setData(value: User[]): void;
+
 
   constructor() {
-    const records: number = TestsHelper.RECORDS;
     fetch('http://localhost:3000')
       .then(response => response.json())
-      .then((data: User[]) => this._data = {
-        front: data.slice(0, records),
-        back: data.slice(records, records * 2)
-      });
+      .then((data: User[]) => this._data = data);
   }
 
   downloadResultsCSV(): void {
@@ -40,75 +37,92 @@ export abstract class AbstractTestsService {
     TestsHelper.clearResults();
   }
 
+  private __getDataPart(records: number = this._RECORDS): DataPart {
+    return {front: this._data.slice(0, records), back: this._data.slice(records, records * 2)};
+  }
+
   protected _runTest(
+    records: number = this._RECORDS,
     name: string,
-    initFn: () => void,
-    testFn: () => void,
+    initData: User[],
+    testData: User[]
   ): void {
-    TestsHelper.runTest(`${this.version}-${name}`, initFn, testFn);
+    TestsHelper.runTest(`${this.version}-${name}-${records}`, () => this.setData(initData), () => this.setData(testData));
   }
 
-  protected _runLoadDataSimulation(): void {
-    this._runTest('loadData', () => this.data = [], () => this.data = this._data.front);
+  protected _runLoadDataSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    this._runTest( records, 'loadData', [], front);
   }
 
-  protected _runLoadNextPageSimulation(): void {
-    this._runTest('loadNextPage', () => this.data = this._data.front, () => this.data = this.data.concat(this._data.back));
+  protected _runLoadNextPageSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = front.concat(back);
+    this._runTest( records, 'loadNextPage', front, testData);
   }
 
-  protected _runLoadPreviousPageSimulation(): void {
-    this._runTest('loadPreviousPage', () => this.data = this._data.back, () => {
-      const data = [...this.data];
-      data.splice(0, 0, ...this._data.front);
-      this.data = data;
-    });
+  protected _runLoadPreviousPageSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testsData = front.concat(back);
+    this._runTest( records, 'loadPreviousPage', back, testsData);
   }
 
 
-  protected _runExpandAllSimulation(): void {
-    this._runTest(
+  protected _runExpandAllSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = front.reduce((acc: User[], row: User, currentIndex: number) => acc.concat(row, back[currentIndex]), [])
+    this._runTest( records,
       'expandAll',
-      () => this.data = this._data.front,
-      () => this.data = this.data.reduce((acc: User[], row: User, currentIndex: number) => acc.concat(row, this._data.back[currentIndex]), [])
+      front,
+      testData
     );
   }
 
-  protected _runCollapseAllSimulation(): void {
-    this._runTest('collapseAll', () => this.data = this._data.front.concat(this._data.back), () => this.data = this.data.filter((_, index: number) => index % 2 === 0));
+  protected _runCollapseAllSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const initData = front.concat(back);
+    const testData = initData.filter((_, index: number) => index % 2 === 0);
+    this._runTest( records, 'collapseAll', initData, testData);
   }
 
-  protected _runSinglePropertyUpdateSimulation(): void {
-    this._runTest(
-      'singlePropertyUpdate',
-      () => this.data = this._data.front,
-      () => this.data = this.data.map((row: User) => ({...row, is_active: false}))
+  protected _runPropertyUpdateSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = front.map((row: User) => ({...row, is_active: false}));
+    this._runTest( records,
+      'propertyUpdate',
+      front,
+      testData
     );
   }
 
-  protected _runObjectUpdateSimulation(): void {
-    this._runTest(
+  protected _runObjectUpdateSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = front.map((row: User, index: number) => ({...back[index], id: row.id}));
+    this._runTest( records,
       'objectUpdate',
-      () => this.data = this._data.front,
-      () => this.data = this.data.map((row: User, index: number) => ({...this._data.back[index], id: row.id}))
+      front,
+      testData
     );
   }
 
-  protected _runSortChangeSimulation(): void {
-    this._runTest(
+  protected _runSortChangeSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = [...front];
+    testData.reverse();
+    this._runTest( records,
       'sortChange',
-      () => this.data = this._data.front,
-      () => this.data = this.data.reduce((acc: User[], row: User, index: number) => {
-        acc.splice(0, 0, row);
-        return acc;
-      }, [])
+      front,
+      testData
     );
   }
 
-  protected _runFilterChangeSimulation(): void {
-    this._runTest(
+  protected _runFilterChangeSimulation(records: number = this._RECORDS): void {
+    const {front, back} = this.__getDataPart(records);
+    const testData = front.filter((row: User) => row.is_active);
+    this._runTest( records,
       'filterChange',
-      () => this.data = this._data.front,
-      () => this.data = this.data.filter((row: User) => row.is_active)
+      front,
+      testData
     );
   }
 }
